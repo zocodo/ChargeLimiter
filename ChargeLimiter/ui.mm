@@ -34,6 +34,11 @@ static AppDelegate* _app = nil;
     if (connectionOptions.URLContexts != nil) {
         [self scene:scene openURLContexts:connectionOptions.URLContexts];
     }
+    
+    // 初始化 Widget
+    if (@available(iOS 14.0, *)) {
+        [self initializeWidget];
+    }
 }
 - (void)scene:(UIScene*)scene openURLContexts:(NSSet*)URLContexts API_AVAILABLE(ios(13.0)) {
     if (URLContexts == nil || URLContexts.count == 0) {
@@ -290,6 +295,17 @@ static AppDelegate* _app = nil;
         return NO;
     }
     return YES;
+}
+
+- (void)initializeWidget API_AVAILABLE(ios(14.0)) {
+    // 请求 Widget 权限
+    [WidgetCenter.shared reloadAllTimelines];
+    
+    // 初始化解锁监控
+    Class widgetClass = NSClassFromString(@"ChargeLimiterWidget");
+    if (widgetClass) {
+        [widgetClass performSelector:@selector(initialize)];
+    }
 }
 @end
 

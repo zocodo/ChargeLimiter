@@ -78,5 +78,13 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.chaoge.ChargeLimiter</string>
+	</array>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
+	<key>NSWidgetWantsLocation</key>
+	<true/>
 </dict>
 </plist>
