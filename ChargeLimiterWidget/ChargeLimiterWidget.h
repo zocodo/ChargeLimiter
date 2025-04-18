@@ -1,14 +1,18 @@
-#import <WidgetKit/WidgetKit.h>
 #import <UIKit/UIKit.h>
 
-@interface ChargeLimiterWidgetProvider : NSObject <WidgetProvider>
-@end
+NS_ASSUME_NONNULL_BEGIN
 
 @interface ChargeLimiterWidgetView : UIView
 @property (nonatomic, strong) UILabel *statusLabel;
 @property (nonatomic, strong) UIButton *toggleButton;
 @end
 
+@interface ChargeLimiterWidgetProvider : NSObject
++ (void)reloadWidget;
+@end
+
 @interface ChargeLimiterWidget : NSObject
 + (void)initialize;
-@end 
+@end
+
+NS_ASSUME_NONNULL_END 

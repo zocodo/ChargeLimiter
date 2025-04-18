@@ -44,17 +44,13 @@
 
 @implementation ChargeLimiterWidgetProvider
 
-- (void)getSnapshotWithCompletion:(void (^)(UIView *))completion {
-    ChargeLimiterWidgetView *view = [[ChargeLimiterWidgetView alloc] initWithFrame:CGRectMake(0, 0, 170, 80)];
-    view.statusLabel.text = @"ChargeLimiter";
-    completion(view);
-}
-
-- (void)getTimelineWithCompletion:(void (^)(NSArray<NSDate *> *))completion {
-    // 每分钟更新一次
-    NSDate *now = [NSDate date];
-    NSDate *nextUpdate = [[NSCalendar currentCalendar] dateByAddingUnit:NSCalendarUnitMinute value:1 toDate:now options:0];
-    completion(@[nextUpdate]);
++ (void)reloadWidget {
+    // 通知系统重新加载 Widget
+    CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(),
+                                       CFSTR("com.apple.widgetkit.reload"),
+                                       NULL,
+                                       NULL,
+                                       YES);
 }
 
 @end
@@ -64,10 +60,6 @@
 + (void)initialize {
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        // 注册 Widget
-        WidgetCenter *center = [WidgetCenter sharedCenter];
-        [center reloadAllTimelines];
-        
         // 设置解锁监听
         [self setupUnlockMonitor];
     });
