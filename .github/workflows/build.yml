@@ -15,7 +15,18 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode.app
+        run: |
+          sudo xcode-select -s /Applications/Xcode.app
+          xcodebuild -version
+          echo "Available SDKs:"
+          xcodebuild -showsdks
+
+      - name: List workspace
+        run: |
+          pwd
+          ls -la
+          echo "Looking for Xcode project files:"
+          find . -name "*.xcodeproj" -o -name "*.xcworkspace"
 
       - name: Build
         run: |
@@ -26,7 +37,8 @@ jobs:
             -sdk iphoneos \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO \
+            -verbose
 
       - name: Build Widget Extension
         run: |
@@ -37,24 +49,32 @@ jobs:
             -sdk iphoneos \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO \
+            -verbose
+
+      - name: List build directory
+        run: |
+          echo "Build directory contents:"
+          ls -R build/
 
       - name: Create TIPA
         run: |
           mkdir -p Payload
-          cp -r build/Release-iphoneos/ChargeLimiter.app Payload/
+          cp -rv build/Release-iphoneos/ChargeLimiter.app Payload/
           zip -r ChargeLimiter.tipa Payload
           rm -rf Payload
+          ls -l ChargeLimiter.tipa
 
       - name: Create DEB
         run: |
           mkdir -p Package_rootless/Applications
-          cp -r build/Release-iphoneos/ChargeLimiter.app Package_rootless/Applications/
+          cp -rv build/Release-iphoneos/ChargeLimiter.app Package_rootless/Applications/
           cd Package_rootless
           find . -name '.DS_Store' -delete
           find . -type f -exec md5sum {} \; > DEBIAN/md5sums
           cd ..
           dpkg-deb -b Package_rootless ChargeLimiter.deb
+          ls -l ChargeLimiter.deb
 
       - name: Create Release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
