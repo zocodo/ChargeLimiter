@@ -1,0 +1,48 @@
+name: iOS Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Build
+        run: |
+          xcodebuild clean build \
+            -project ChargeLimiter.xcodeproj \
+            -scheme ChargeLimiter \
+            -configuration Release \
+            -sdk iphoneos \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Build Widget Extension
+        run: |
+          xcodebuild clean build \
+            -project ChargeLimiter.xcodeproj \
+            -scheme ChargeLimiterWidget \
+            -configuration Release \
+            -sdk iphoneos \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-products
+          path: |
+            build/Release-iphoneos/ChargeLimiter.app
+            build/Release-iphoneos/ChargeLimiterWidget.appex
