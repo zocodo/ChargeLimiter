@@ -31,7 +31,7 @@ jobs:
       - name: Provision private iOS SDK
         run: |
           mkdir -p $THEOS/sdks
-          cp -R /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS*.sdk $THEOS/sdks/iPhoneOS.sdk
+          cp -R /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS*.sdk $THEOS/sdks/
 
       - name: Install GCDWebServer.framework
         run: |
