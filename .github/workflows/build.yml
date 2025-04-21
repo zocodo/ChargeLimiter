@@ -1,0 +1,81 @@
+name: Build ChargeLimiter (deb & ipa)
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: macos-latest
+    env:
+      THEOS: $HOME/theos
+      THEOS_DEVICE_IP: 127.0.0.1
+      THEOS_DEVICE_PORT: 22
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install system dependencies
+        run: |
+          brew update
+          brew install dpkg ldid wget git zip
+
+      - name: Clone Theos
+        run: git clone --depth 1 https://github.com/theos/theos.git $THEOS
+
+      - name: Provision private iOS SDK for Theos
+        run: |
+          mkdir -p $THEOS/sdks
+          cp -R /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS*.sdk $THEOS/sdks/iPhoneOS.sdk
+
+      - name: Install GCDWebServer framework
+        run: |
+          sudo mkdir -p /opt/framework
+          sudo git clone --depth 1 https://github.com/swisspol/GCDWebServer.git /opt/framework/GCDWebServers.framework
+
+      - name: Build normal .deb
+        working-directory: ChargeLimiter
+        run: |
+          mkdir -p build/normal
+          make package \
+            THEOS=$THEOS \
+            PREFIX_PACKAGE_DIR=build/normal
+
+      - name: Build rootless .deb
+        working-directory: ChargeLimiter
+        run: |
+          mkdir -p build/rootless
+          make -f MakefileRootless package \
+            THEOS=/opt/theos_rootless \
+            PREFIX_PACKAGE_DIR=build/rootless
+
+      - name: Package IPAs
+        run: |
+          set -eux
+
+          # 普通版 IPA
+          dpkg-deb -x ChargeLimiter/build/normal/*.deb payload_normal
+          mkdir -p Payload_normal
+          cp -R payload_normal/Applications/ChargeLimiter.app Payload_normal/
+          zip -qr ChargeLimiter.ipa Payload_normal
+
+          # Rootless 版 IPA
+          dpkg-deb -x ChargeLimiter/build/rootless/*.deb payload_rootless
+          mkdir -p Payload_rootless
+          cp -R payload_rootless/Applications/ChargeLimiter.app Payload_rootless/
+          zip -qr ChargeLimiter-rootless.ipa Payload_rootless
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ChargeLimiter-artifacts
+          path: |
+            ChargeLimiter/build/normal/*.deb
+            ChargeLimiter/build/rootless/*.deb
+            ChargeLimiter.ipa
+            ChargeLimiter-rootless.ipa
