@@ -14,7 +14,7 @@
 
 #import <Foundation/Foundation.h>
 #import <IOKit/IOKitLib.h>
-#import <IOHIDFamily/IOHIDService.h>
+#import <IOKit/hid/IOHIDService.h>
 #import <UIKit/UIKit.h>
 
 #define NSLog2(FORMAT, ...) os_log(OS_LOG_DEFAULT,"%{public}@", [NSString stringWithFormat:FORMAT, ##__VA_ARGS__])
