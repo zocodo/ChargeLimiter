@@ -20,7 +20,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Install system dependencies
+      - name: Install dependencies
         run: |
           brew update
           brew install dpkg ldid wget git zip
@@ -28,12 +28,12 @@ jobs:
       - name: Clone Theos
         run: git clone --depth 1 https://github.com/theos/theos.git $THEOS
 
-      - name: Provision private iOS SDK for Theos
+      - name: Provision private iOS SDK
         run: |
           mkdir -p $THEOS/sdks
           cp -R /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS*.sdk $THEOS/sdks/iPhoneOS.sdk
 
-      - name: Install GCDWebServer framework
+      - name: Install GCDWebServer.framework
         run: |
           sudo mkdir -p /opt/framework
           sudo git clone --depth 1 https://github.com/swisspol/GCDWebServer.git /opt/framework/GCDWebServers.framework
@@ -51,7 +51,7 @@ jobs:
         run: |
           mkdir -p build/rootless
           make -f MakefileRootless package \
-            THEOS=/opt/theos_rootless \
+            THEOS=$THEOS \
             PREFIX_PACKAGE_DIR=build/rootless
 
       - name: Package IPAs
@@ -70,12 +70,18 @@ jobs:
           cp -R payload_rootless/Applications/ChargeLimiter.app Payload_rootless/
           zip -qr ChargeLimiter-rootless.ipa Payload_rootless
 
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+      - name: Upload .deb artifacts
+        uses: actions/upload-artifact@v4
         with:
-          name: ChargeLimiter-artifacts
+          name: ChargeLimiter-deb
           path: |
             ChargeLimiter/build/normal/*.deb
             ChargeLimiter/build/rootless/*.deb
+
+      - name: Upload .ipa artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ChargeLimiter-ipa
+          path: |
             ChargeLimiter.ipa
             ChargeLimiter-rootless.ipa
