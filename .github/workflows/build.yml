@@ -1,87 +1,106 @@
-name: Build ChargeLimiter (deb & ipa)
+name: iOS Build
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
   build:
-    runs-on: macos-latest
-    env:
-      THEOS: $HOME/theos
-      THEOS_DEVICE_IP: 127.0.0.1
-      THEOS_DEVICE_PORT: 22
+    name: Build and Test
+    runs-on: macos-12
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v2
 
-      - name: Install dependencies
+      - name: Select Xcode
         run: |
-          brew update
-          brew install dpkg ldid wget git zip
+          sudo xcode-select -s /Applications/Xcode.app
+          xcodebuild -version
+          echo "Available SDKs:"
+          xcodebuild -showsdks
 
-      - name: Clone Theos
-        run: git clone --depth 1 https://github.com/theos/theos.git $THEOS
-
-      - name: Provision private iOS SDK
+      - name: List workspace
         run: |
-          mkdir -p $THEOS/sdks
-          cp -R /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS*.sdk $THEOS/sdks/
+          pwd
+          ls -la
+          echo "Looking for Xcode project files:"
+          find . -name "*.xcodeproj" -o -name "*.xcworkspace"
 
-      - name: Install GCDWebServer.framework
+      - name: Build
         run: |
-          sudo mkdir -p /opt/framework
-          sudo git clone --depth 1 https://github.com/swisspol/GCDWebServer.git /opt/framework/GCDWebServers.framework
+          xcodebuild clean build \
+            -project ChargeLimiter.xcodeproj \
+            -scheme ChargeLimiter \
+            -configuration Release \
+            -sdk iphoneos \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            -verbose
 
-      - name: Build normal .deb
-        working-directory: ChargeLimiter
+      - name: Build Widget Extension
         run: |
-          mkdir -p build/normal
-          make package \
-            THEOS=$THEOS \
-            PREFIX_PACKAGE_DIR=build/normal
+          xcodebuild clean build \
+            -project ChargeLimiter.xcodeproj \
+            -scheme ChargeLimiterWidget \
+            -configuration Release \
+            -sdk iphoneos \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            -verbose
 
-      - name: Build rootless .deb
-        working-directory: ChargeLimiter
+      - name: List build directory
         run: |
-          mkdir -p build/rootless
-          make -f MakefileRootless package \
-            THEOS=$THEOS \
-            PREFIX_PACKAGE_DIR=build/rootless
+          echo "Build directory contents:"
+          ls -R build/
 
-      - name: Package IPAs
+      - name: Create TIPA
         run: |
-          set -eux
+          mkdir -p Payload
+          cp -rv build/Release-iphoneos/ChargeLimiter.app Payload/
+          zip -r ChargeLimiter.tipa Payload
+          rm -rf Payload
+          ls -l ChargeLimiter.tipa
 
-          # 普通版 IPA
-          dpkg-deb -x ChargeLimiter/build/normal/*.deb payload_normal
-          mkdir -p Payload_normal
-          cp -R payload_normal/Applications/ChargeLimiter.app Payload_normal/
-          zip -qr ChargeLimiter.ipa Payload_normal
+      - name: Create DEB
+        run: |
+          mkdir -p Package_rootless/Applications
+          cp -rv build/Release-iphoneos/ChargeLimiter.app Package_rootless/Applications/
+          cd Package_rootless
+          find . -name '.DS_Store' -delete
+          find . -type f -exec md5sum {} \; > DEBIAN/md5sums
+          cd ..
+          dpkg-deb -b Package_rootless ChargeLimiter.deb
+          ls -l ChargeLimiter.deb
 
-          # Rootless 版 IPA
-          dpkg-deb -x ChargeLimiter/build/rootless/*.deb payload_rootless
-          mkdir -p Payload_rootless
-          cp -R payload_rootless/Applications/ChargeLimiter.app Payload_rootless/
-          zip -qr ChargeLimiter-rootless.ipa Payload_rootless
-
-      - name: Upload .deb artifacts
-        uses: actions/upload-artifact@v4
+      - name: Create Release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        id: create_release
+        uses: softprops/action-gh-release@v1
         with:
-          name: ChargeLimiter-deb
-          path: |
-            ChargeLimiter/build/normal/*.deb
-            ChargeLimiter/build/rootless/*.deb
+          files: |
+            ChargeLimiter.tipa
+            ChargeLimiter.deb
+          tag_name: v${{ github.run_number }}
+          name: Release v${{ github.run_number }}
+          body: |
+            Automated build from GitHub Actions
+            - Build number: ${{ github.run_number }}
+            - Commit: ${{ github.sha }}
 
-      - name: Upload .ipa artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: ChargeLimiter-ipa
-          path: |
-            ChargeLimiter.ipa
-            ChargeLimiter-rootless.ipa
+            ## 安装说明
+
+            ### TIPA 安装
+            1. 下载 ChargeLimiter.tipa
+            2. 使用 AltStore 或其他签名工具安装
+
+            ### DEB 安装
+            1. 下载 ChargeLimiter.deb
+            2. 使用 Filza 或其他包管理器安装
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
